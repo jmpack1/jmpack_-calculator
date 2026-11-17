@@ -28,5 +28,5 @@ window.JM_CONFIG = {
 
   // 2) 카카오 JavaScript 키 (developers.kakao.com → 내 애플리케이션 → 앱 키)
   //    카카오톡 공유 + 카카오맵 맛집 자동 불러오기에 사용
-  KAKAO_JS_KEY: '',
+  KAKAO_JS_KEY: 'd630fbe7ed4c2a9f11c9149420e39832',
 };
