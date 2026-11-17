@@ -324,7 +324,7 @@
     try {
       if (!kakaoShareReady) kakaoShareReady = loadScript('https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js').then(() => { if (!window.Kakao.isInitialized()) window.Kakao.init(CFG.KAKAO_JS_KEY); });
       await kakaoShareReady;
-      window.Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: baseUrl(), webUrl: baseUrl() }, buttonTitle: btn });
+      window.Kakao.Share.sendDefault({ objectType: 'text', text: `${text}\n\n👉 ${baseUrl()}`, link: { mobileWebUrl: baseUrl(), webUrl: baseUrl() }, buttonTitle: btn });
       return true;
     } catch (e) { console.warn(e); return false; }
   }
@@ -455,7 +455,10 @@
         ${isSpect ? '<p class="sub" style="margin:8px 0 0">자리가 꽉 찼어요. 이번 판은 관전으로 참여해요.</p>' : ''}
         <button class="btn" data-a="start" ${act.length ? '' : 'disabled'}>${act.length}명으로 게임 시작 ▶</button>
         <div class="row" style="margin-top:2px">
-          <button class="btn kakao" data-a="invite">💬 단톡방에 초대</button>
+          <button class="btn kakao" data-a="invite">💬 카톡 초대</button>
+          <button class="btn ghost" data-a="copyLink">🔗 링크 복사</button>
+        </div>
+        <div class="row" style="margin-top:2px">
           ${inRoom ? '<button class="btn ghost" data-a="leave">오늘은 빠질게요</button>' : '<button class="btn ghost" data-a="rejoin">다시 참여</button>'}
         </div>
       </div>
@@ -666,6 +669,11 @@
     if (a === 'again') { await advance('result'); return; }
     if (a === 'leave') { await store.set(`${RP}/players/${me.id}`, null); return; }
     if (a === 'rejoin') { await join(); return; }
+    if (a === 'copyLink') {
+      const t = `🍱 오늘 점심 정하자! JM 런치 배틀\n${baseUrl()}`;
+      try { await navigator.clipboard.writeText(t); toast('링크 복사 완료! 단톡방에 붙여넣기 해주세요 📋'); } catch { prompt('아래 내용을 복사해 단톡방에 붙여넣어 주세요', t); }
+      return;
+    }
     if (a === 'invite') { await share(`🍱 오늘 점심 뭐 먹지? JM 런치 배틀 시작!\n링크 누르고 들어와 주세요 (최대 ${MAX}명)`, '게임 참여하기'); return; }
     if (a === 'shareResult') {
       const w = (room.cands || []).find((c) => c.id === room.winner);
