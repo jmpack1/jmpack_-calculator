@@ -1,0 +1,7 @@
+{
+  "rules": {
+    "rooms": { ".read": true, ".write": true },
+    "history": { ".read": true, ".write": true },
+    "restaurants": { ".read": true, ".write": true }
+  }
+}
