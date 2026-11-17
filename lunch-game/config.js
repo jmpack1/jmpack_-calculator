@@ -16,9 +16,17 @@ window.JM_CONFIG = {
 
   // 1) Firebase Realtime Database 설정 (README 참고)
   //    예: { apiKey: "...", authDomain: "...", databaseURL: "https://xxx-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "..." }
-  FIREBASE: null,
+  FIREBASE: {
+    apiKey: 'AIzaSyCimZ1vVCrF_7FMV796W0Gy8y0pHqDeuK4',
+    authDomain: 'jm-lunch.firebaseapp.com',
+    databaseURL: 'https://jm-lunch-default-rtdb.asia-southeast1.firebasedatabase.app',
+    projectId: 'jm-lunch',
+    storageBucket: 'jm-lunch.firebasestorage.app',
+    messagingSenderId: '113945424661',
+    appId: '1:113945424661:web:91e62a90b94cc4b5466f1c',
+  },
 
   // 2) 카카오 JavaScript 키 (developers.kakao.com → 내 애플리케이션 → 앱 키)
   //    카카오톡 공유 + 카카오맵 맛집 자동 불러오기에 사용
-  KAKAO_JS_KEY: '',
+  KAKAO_JS_KEY: 'd630fbe7ed4c2a9f11c9149420e39832',
 };

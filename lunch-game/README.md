@@ -48,7 +48,12 @@ cd lunch-game && python3 -m http.server 8000   # http://localhost:8000
    FIREBASE: { apiKey: "...", authDomain: "...", databaseURL: "https://...firebasedatabase.app", projectId: "..." },
    ```
 
-### 2) 인터넷에 올리기: Firebase Hosting
+### 2) 인터넷에 올리기: GitHub Pages (추천, 자동 배포)
+1. GitHub 저장소 → **Settings → Pages → Source**를 **GitHub Actions**로 변경
+2. `main` 브랜치의 `lunch-game/`이 바뀔 때마다 자동으로 배포됩니다.
+3. 주소: **https://jmpack1.github.io/jmpack_-calculator/** ← 단톡방 공지에 고정
+
+### 2-1) (대안) Firebase Hosting
 ```bash
 npm install -g firebase-tools
 firebase login
