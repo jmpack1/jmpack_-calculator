@@ -275,7 +275,7 @@
     let committedRoom = null;
     try {
       const ok = await store.transaction(RP, (cur) => {
-        if (!cur || (cur.step || 0) !== step || cur.phase !== from) return undefined;
+        if (!cur || (cur.step || 0) !== step || (cur.phase || 'lobby') !== from) return undefined;
         committedRoom = transition(cur, from);
         return committedRoom;
       });
@@ -288,10 +288,11 @@
 
   // ---------- 행동 ----------
   async function ensureRoom() {
-    await store.transaction(RP, (cur) => (cur ? undefined : { step: 0, round: 1, phase: 'lobby', created: store.now() }));
+    // 방이 없거나, 참가자만 있고 단계 정보가 빠진 방이면 대기실 상태로 채움
+    await store.transaction(RP, (cur) => (cur && cur.phase ? undefined : { ...(cur || {}), step: (cur && cur.step) || 0, round: (cur && cur.round) || 1, phase: 'lobby', created: (cur && cur.created) || store.now() }));
   }
   async function join() {
-    if (!room || !me.name) return;
+    if (!roomReady || !room || !me.name) return;
     const p = room.players && room.players[me.id];
     if (p && p.name === me.name && p.emoji === me.emoji) return;
     await store.update(`${RP}/players/${me.id}`, { name: me.name, emoji: me.emoji, t: p ? p.t : store.now() });
@@ -709,11 +710,13 @@
 
   // 하트 투표 단계가 바뀌면 로컬 하트 초기화
   let lastPhaseKey = '';
+  let roomReady = false;
   function onRoom(r) {
+    if (r && !r.phase) r = { ...r, phase: 'lobby', step: r.step || 0, round: r.round || 1 };
     room = r;
     const pk = r ? `${r.round}:${r.phase}` : '';
     if (pk !== lastPhaseKey) { lastPhaseKey = pk; myHearts = {}; }
-    if (r && me.name && r.phase === 'lobby' && !(r.players && r.players[me.id]) && !onRoom.left) join();
+    if (r && me.name && roomReady && r.phase === 'lobby' && !(r.players && r.players[me.id]) && !onRoom.left) join();
     render();
   }
 
@@ -736,6 +739,8 @@
     store.on('restaurants', (d) => { rdb = d || {}; render(); });
     store.on(RP, onRoom);
     await ensureRoom();
+    roomReady = true;
+    if (room) onRoom(room);
     // 나가기 누른 사람은 자동 재입장하지 않도록
     app.addEventListener('click', (e) => { const el = e.target.closest('[data-a]'); if (!el) return; if (el.dataset.a === 'leave') onRoom.left = true; if (el.dataset.a === 'rejoin' || el.dataset.a === 'saveProfile') onRoom.left = false; }, true);
     setInterval(tick, 250);
