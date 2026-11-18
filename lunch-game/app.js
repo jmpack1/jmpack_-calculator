@@ -275,7 +275,7 @@
     let committedRoom = null;
     try {
       const ok = await store.transaction(RP, (cur) => {
-        if (!cur || (cur.step || 0) !== step || cur.phase !== from) return undefined;
+        if (!cur || (cur.step || 0) !== step || (cur.phase || 'lobby') !== from) return undefined;
         committedRoom = transition(cur, from);
         return committedRoom;
       });
@@ -288,10 +288,11 @@
 
   // ---------- 행동 ----------
   async function ensureRoom() {
-    await store.transaction(RP, (cur) => (cur ? undefined : { step: 0, round: 1, phase: 'lobby', created: store.now() }));
+    // 방이 없거나, 참가자만 있고 단계 정보가 빠진 방이면 대기실 상태로 채움
+    await store.transaction(RP, (cur) => (cur && cur.phase ? undefined : { ...(cur || {}), step: (cur && cur.step) || 0, round: (cur && cur.round) || 1, phase: 'lobby', created: (cur && cur.created) || store.now() }));
   }
   async function join() {
-    if (!room || !me.name) return;
+    if (!roomReady || !room || !me.name) return;
     const p = room.players && room.players[me.id];
     if (p && p.name === me.name && p.emoji === me.emoji) return;
     await store.update(`${RP}/players/${me.id}`, { name: me.name, emoji: me.emoji, t: p ? p.t : store.now() });
@@ -324,7 +325,7 @@
     try {
       if (!kakaoShareReady) kakaoShareReady = loadScript('https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js').then(() => { if (!window.Kakao.isInitialized()) window.Kakao.init(CFG.KAKAO_JS_KEY); });
       await kakaoShareReady;
-      window.Kakao.Share.sendDefault({ objectType: 'text', text, link: { mobileWebUrl: baseUrl(), webUrl: baseUrl() }, buttonTitle: btn });
+      window.Kakao.Share.sendDefault({ objectType: 'text', text: `${text}\n\n👉 ${baseUrl()}`, link: { mobileWebUrl: baseUrl(), webUrl: baseUrl() }, buttonTitle: btn });
       return true;
     } catch (e) { console.warn(e); return false; }
   }
@@ -455,7 +456,10 @@
         ${isSpect ? '<p class="sub" style="margin:8px 0 0">자리가 꽉 찼어요. 이번 판은 관전으로 참여해요.</p>' : ''}
         <button class="btn" data-a="start" ${act.length ? '' : 'disabled'}>${act.length}명으로 게임 시작 ▶</button>
         <div class="row" style="margin-top:2px">
-          <button class="btn kakao" data-a="invite">💬 단톡방에 초대</button>
+          <button class="btn kakao" data-a="invite">💬 카톡 초대</button>
+          <button class="btn ghost" data-a="copyLink">🔗 링크 복사</button>
+        </div>
+        <div class="row" style="margin-top:2px">
           ${inRoom ? '<button class="btn ghost" data-a="leave">오늘은 빠질게요</button>' : '<button class="btn ghost" data-a="rejoin">다시 참여</button>'}
         </div>
       </div>
@@ -666,6 +670,11 @@
     if (a === 'again') { await advance('result'); return; }
     if (a === 'leave') { await store.set(`${RP}/players/${me.id}`, null); return; }
     if (a === 'rejoin') { await join(); return; }
+    if (a === 'copyLink') {
+      const t = `🍱 오늘 점심 정하자! JM 런치 배틀\n${baseUrl()}`;
+      try { await navigator.clipboard.writeText(t); toast('링크 복사 완료! 단톡방에 붙여넣기 해주세요 📋'); } catch { prompt('아래 내용을 복사해 단톡방에 붙여넣어 주세요', t); }
+      return;
+    }
     if (a === 'invite') { await share(`🍱 오늘 점심 뭐 먹지? JM 런치 배틀 시작!\n링크 누르고 들어와 주세요 (최대 ${MAX}명)`, '게임 참여하기'); return; }
     if (a === 'shareResult') {
       const w = (room.cands || []).find((c) => c.id === room.winner);
@@ -701,11 +710,13 @@
 
   // 하트 투표 단계가 바뀌면 로컬 하트 초기화
   let lastPhaseKey = '';
+  let roomReady = false;
   function onRoom(r) {
+    if (r && !r.phase) r = { ...r, phase: 'lobby', step: r.step || 0, round: r.round || 1 };
     room = r;
     const pk = r ? `${r.round}:${r.phase}` : '';
     if (pk !== lastPhaseKey) { lastPhaseKey = pk; myHearts = {}; }
-    if (r && me.name && r.phase === 'lobby' && !(r.players && r.players[me.id]) && !onRoom.left) join();
+    if (r && me.name && roomReady && r.phase === 'lobby' && !(r.players && r.players[me.id]) && !onRoom.left) join();
     render();
   }
 
@@ -728,6 +739,8 @@
     store.on('restaurants', (d) => { rdb = d || {}; render(); });
     store.on(RP, onRoom);
     await ensureRoom();
+    roomReady = true;
+    if (room) onRoom(room);
     // 나가기 누른 사람은 자동 재입장하지 않도록
     app.addEventListener('click', (e) => { const el = e.target.closest('[data-a]'); if (!el) return; if (el.dataset.a === 'leave') onRoom.left = true; if (el.dataset.a === 'rejoin' || el.dataset.a === 'saveProfile') onRoom.left = false; }, true);
     setInterval(tick, 250);
